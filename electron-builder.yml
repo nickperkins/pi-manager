@@ -39,6 +39,7 @@ win:
   target: nsis
 
 linux:
+  icon: resources/icon.png
   target: AppImage
 
 npmRebuild: false
