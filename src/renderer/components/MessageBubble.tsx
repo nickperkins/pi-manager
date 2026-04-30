@@ -8,6 +8,15 @@ interface MessageBubbleProps {
   item: UserViewItem | AssistantViewItem;
 }
 
+// Open all markdown links in the OS browser, not inside Electron.
+// The main process setWindowOpenHandler/will-navigate handlers are the safety
+// net, but setting target + rel here makes the intent explicit.
+const markdownComponents = {
+  a: ({ href, children }: React.ComponentProps<"a">) => (
+    <a href={href} target="_blank" rel="noreferrer">{children}</a>
+  ),
+};
+
 export function MessageBubble({ item }: MessageBubbleProps): React.JSX.Element | null {
   const [thinkingOpen, setThinkingOpen] = useState(false);
 
@@ -52,7 +61,11 @@ export function MessageBubble({ item }: MessageBubbleProps): React.JSX.Element |
         </span>
       ) : item.text ? (
         <div className="message-markdown">
-          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeHighlight]}
+            components={markdownComponents}
+          >
             {item.text}
           </ReactMarkdown>
         </div>

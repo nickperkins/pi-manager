@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 
 // Ensure correct app name in dock/taskbar (especially in dev mode where
 // the binary is "Electron" and app.getName() would return "electron")
@@ -47,6 +47,23 @@ function createWindow(): void {
   } else {
     win.loadFile(join(__dirname, "../renderer/index.html"));
   }
+
+  // Open all target=_blank links and external navigations in the OS browser,
+  // never inside the Electron window.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  win.webContents.on("will-navigate", (event, url) => {
+    const appUrl = is.dev
+      ? process.env["ELECTRON_RENDERER_URL"] ?? ""
+      : `file://${join(__dirname, "../renderer/index.html")}`;
+    if (!url.startsWith(appUrl)) {
+      event.preventDefault();
+      void shell.openExternal(url);
+    }
+  });
 }
 
 app.whenReady().then(() => {

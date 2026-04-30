@@ -226,6 +226,14 @@ describe("MessageBubble", () => {
     expect(container.querySelector("del")).toHaveTextContent("old");
   });
 
+  it("markdown links open in a new tab (target=_blank)", () => {
+    render(<MessageBubble item={assistant({ text: "[pi](https://pi.dev)" })} />);
+    const link = screen.getByRole("link", { name: "pi" });
+    expect(link).toHaveAttribute("href", "https://pi.dev");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noreferrer");
+  });
+
   it("user message has no .message-markdown container", () => {
     const { container } = render(<MessageBubble item={user} />);
     expect(container.querySelector(".message-markdown")).toBeNull();
