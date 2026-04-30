@@ -1,0 +1,69 @@
+name: Build
+
+on:
+  # Triggered manually by pushing a version tag: git tag v1.0.0 && git push --tags
+  push:
+    tags:
+      - "v*.*.*"
+
+  # On PRs, only when the build config itself has changed — to verify the
+  # pipeline still works before merging. No artifact publishing on PRs.
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/build.yml"
+      - "electron-builder.yml"
+      - "electron.vite.config.ts"
+      - "vite.host.config.mts"
+
+jobs:
+  build-mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Build & publish (tag) / Build only (PR)
+        run: npm run build && electron-builder --mac --publish ${{ github.event_name == 'push' && 'always' || 'never' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Build & publish (tag) / Build only (PR)
+        run: npm run build && electron-builder --win --publish ${{ github.event_name == 'push' && 'always' || 'never' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Build & publish (tag) / Build only (PR)
+        run: npm run build && electron-builder --linux --publish ${{ github.event_name == 'push' && 'always' || 'never' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

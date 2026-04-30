@@ -32,7 +32,7 @@ mac:
   category: public.app-category.developer-tools
   target:
     - target: dmg
-      arch: [arm64]
+      arch: [universal]
 
 win:
   executableName: pi-manager
@@ -42,3 +42,8 @@ linux:
   target: AppImage
 
 npmRebuild: false
+
+publish:
+  provider: github
+  owner: nickperkins
+  repo: pi-manager

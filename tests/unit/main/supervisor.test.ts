@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { Supervisor } from "../../../src/main/supervisor";
-import type { HostEvent, HostResponse, HostCommand } from "@shared/protocol";
 import type { AgentSessionEvent } from "@mariozechner/pi-coding-agent";
 import type { SessionStatus } from "@shared/types";
 

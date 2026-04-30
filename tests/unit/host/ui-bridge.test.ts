@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { createUiBridge } from "../../../src/host/ui-bridge";
 import type { HostEvent } from "../../../src/shared/protocol";
 

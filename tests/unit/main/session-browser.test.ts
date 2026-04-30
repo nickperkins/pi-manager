@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createSessionBrowser } from "../../../src/main/session-browser";
-import type { DiscoveredSession } from "@shared/types";
 import type { SessionBrowser } from "../../../src/main/session-browser";
 
 // ---------------------------------------------------------------------------

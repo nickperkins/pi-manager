@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { EventEmitter } from "node:events";
 import type { ManagerSessionRecord, PersistedManagerSession, PersistedStats, SessionStatus } from "@shared/types";
-import type { HostCommand, HostEvent, HostResponse } from "@shared/protocol";
+import type { HostCommand, HostResponse } from "@shared/protocol";
 import type { AgentSessionEvent } from "@mariozechner/pi-coding-agent";
 
 // ---------------------------------------------------------------------------

@@ -6,6 +6,17 @@ const alias = { "@shared": resolve(__dirname, "src/shared") };
 
 export default defineConfig({
   test: {
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "json-summary", "html"],
+      reportsDirectory: "coverage",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/renderer/env.d.ts",
+        "src/renderer/main.tsx",
+        "src/preload/index.d.ts",
+      ],
+    },
     projects: [
       // ── Node environment: host + main unit tests ──────────────────────
       {
