@@ -55,13 +55,19 @@ function createWindow(): void {
     return { action: "deny" };
   });
 
+  // Prevent any navigation away from the app inside the BrowserWindow.
+  // The renderer is a local SPA — it never needs to navigate. Any URL that
+  // looks like http/https/mailto is opened in the OS browser instead.
   win.webContents.on("will-navigate", (event, url) => {
-    const appUrl = is.dev
-      ? process.env["ELECTRON_RENDERER_URL"] ?? ""
-      : `file://${join(__dirname, "../renderer/index.html")}`;
-    if (!url.startsWith(appUrl)) {
-      event.preventDefault();
-      void shell.openExternal(url);
+    event.preventDefault();
+    try {
+      const parsed = new URL(url);
+      if (["http:", "https:", "mailto:"].includes(parsed.protocol)) {
+        void shell.openExternal(url);
+      }
+      // Other schemes (e.g. file:, javascript:) are silently blocked.
+    } catch {
+      // Unparseable URL — block silently.
     }
   });
 }

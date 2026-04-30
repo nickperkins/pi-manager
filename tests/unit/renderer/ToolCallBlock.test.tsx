@@ -81,6 +81,36 @@ describe("ToolCallBlock", () => {
     expect(screen.getByText("error")).toBeInTheDocument();
   });
 
+  it("write: shows error result when isError is true", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "write",
+      args: { path: "/a.ts", content: "hello" },
+      result: "EACCES: permission denied",
+      isError: true,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("error")).toBeInTheDocument();
+    expect(screen.getByText("EACCES: permission denied")).toBeInTheDocument();
+    // Does NOT show the would-be written content
+    expect(screen.queryByText("written")).not.toBeInTheDocument();
+  });
+
+  it("edit: shows error result when isError is true", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "edit",
+      args: { path: "/a.ts", edits: [{ oldText: "a", newText: "b" }] },
+      result: "oldText not found in file",
+      isError: true,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("error")).toBeInTheDocument();
+    expect(screen.getByText("oldText not found in file")).toBeInTheDocument();
+    // Does NOT show the diff
+    expect(screen.queryByText("changes")).not.toBeInTheDocument();
+  });
+
   // ── write ───────────────────────────────────────────────────────────────
 
   it("write: always expandable even when result is null", () => {

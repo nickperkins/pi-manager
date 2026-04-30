@@ -101,6 +101,16 @@ function EditDiff({ edits }: { edits: EditEntry[] }): React.JSX.Element {
 }
 
 function ExpandedContent({ item }: { item: ToolCallViewItem }): React.JSX.Element {
+  // Always show the error/result when the tool call failed, regardless of tool type.
+  if (item.isError && item.result !== null) {
+    return (
+      <div className="tool-call-body">
+        <div className="tool-call-section-label">error</div>
+        <pre className="tool-call-code">{item.result}</pre>
+      </div>
+    );
+  }
+
   if (item.name === "write") {
     const content =
       typeof (item.args as Record<string, unknown>).content === "string"

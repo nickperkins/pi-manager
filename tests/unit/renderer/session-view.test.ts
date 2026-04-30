@@ -220,7 +220,7 @@ describe("applyEvent", () => {
     // agent_end.messages is a partial list (current run only); the full history
     // must come from get_messages. applyEvent must not clobber existing items.
     const state: SessionViewState = {
-      items: [{ kind: "user", key: "user-100", text: "prior message", timestamp: 100 }],
+      items: [{ kind: "user", key: "user-100", text: "prior message", images: [], timestamp: 100 }],
       isStreaming: true,
     };
     const next = applyEvent(state, {
@@ -324,6 +324,7 @@ describe("applyEvent", () => {
       kind: "user",
       key: "user-5000",
       text: "hello from user",
+      images: [],
       timestamp: 5000,
     };
     const state: SessionViewState = { items: [existing], isStreaming: false };
