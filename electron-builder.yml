@@ -33,7 +33,7 @@ mac:
   category: public.app-category.developer-tools
   target:
     - target: dmg
-      arch: [universal]
+      arch: [arm64]
 
 win:
   executableName: pi-manager
