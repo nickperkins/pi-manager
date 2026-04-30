@@ -11,10 +11,13 @@ interface MessageBubbleProps {
 // Open all markdown links in the OS browser, not inside Electron.
 // The main process setWindowOpenHandler/will-navigate handlers are the safety
 // net, but setting target + rel here makes the intent explicit.
+// Images are disabled — agent output rarely contains them and allowing remote
+// image loads in an Electron renderer is an unnecessary attack surface.
 const markdownComponents = {
   a: ({ href, children }: React.ComponentProps<"a">) => (
     <a href={href} target="_blank" rel="noreferrer">{children}</a>
   ),
+  img: () => null,
 };
 
 export function MessageBubble({ item }: MessageBubbleProps): React.JSX.Element | null {

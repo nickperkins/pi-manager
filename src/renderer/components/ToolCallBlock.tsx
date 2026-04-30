@@ -39,7 +39,8 @@ function getToolSummary(name: string, args: Record<string, unknown>): string | n
     case "ls": {
       const p = typeof args.path === "string" ? args.path : null;
       if (!p) return null;
-      return p.split("/").pop() ?? p;
+      // split on both / and \ for cross-platform safety
+      return p.split(/[\\/]/).pop() ?? p;
     }
     case "grep": {
       const pattern = typeof args.pattern === "string" ? args.pattern : null;
@@ -152,7 +153,10 @@ export function ToolCallBlock({ item }: ToolCallBlockProps): React.JSX.Element {
         role={expandable ? "button" : undefined}
         tabIndex={expandable ? 0 : undefined}
         onKeyDown={(e) => {
-          if (expandable && (e.key === "Enter" || e.key === " ")) setOpen((v) => !v);
+          if (expandable && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
         }}
         aria-expanded={expandable ? open : undefined}
         aria-label={

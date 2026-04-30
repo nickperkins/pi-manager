@@ -234,6 +234,13 @@ describe("MessageBubble", () => {
     expect(link).toHaveAttribute("rel", "noreferrer");
   });
 
+  it("markdown images are suppressed", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "![alt](https://example.com/img.png)" })} />,
+    );
+    expect(container.querySelector("img")).toBeNull();
+  });
+
   it("user message has no .message-markdown container", () => {
     const { container } = render(<MessageBubble item={user} />);
     expect(container.querySelector(".message-markdown")).toBeNull();
