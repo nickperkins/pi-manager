@@ -49,3 +49,4 @@ publish:
   provider: github
   owner: nickperkins
   repo: pi-manager
+  releaseType: release
