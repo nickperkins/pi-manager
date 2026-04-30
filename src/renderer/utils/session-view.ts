@@ -2,6 +2,7 @@ import type { AgentSessionEvent } from "@mariozechner/pi-coding-agent";
 import type { AgentMessage } from "@mariozechner/pi-agent-core";
 import type {
   AssistantMessage,
+  ImageContent,
   TextContent,
   ThinkingContent,
   ToolCall,
@@ -15,6 +16,8 @@ export interface UserViewItem {
   kind: "user";
   key: string;
   text: string;
+  /** Base64 data URIs for any images attached to this message (e.g. pasted in pi TUI). */
+  images: string[];
   timestamp: number;
 }
 
@@ -48,12 +51,16 @@ export interface SessionViewState {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function extractUserText(msg: UserMessage): string {
-  if (typeof msg.content === "string") return msg.content;
-  return msg.content
+function extractUserContent(msg: UserMessage): { text: string; images: string[] } {
+  if (typeof msg.content === "string") return { text: msg.content, images: [] };
+  const text = msg.content
     .filter((c): c is TextContent => c.type === "text")
     .map((c) => c.text)
     .join("");
+  const images = msg.content
+    .filter((c): c is ImageContent => c.type === "image")
+    .map((c) => `data:${c.mimeType};base64,${c.data}`);
+  return { text, images };
 }
 
 function extractAssistantParts(content: AssistantMessage["content"]): {
@@ -116,10 +123,12 @@ export function buildViewItems(messages: AgentMessage[]): MessageViewItem[] {
 
     if (role === "user") {
       const userMsg = msg as UserMessage;
+      const { text, images } = extractUserContent(userMsg);
       items.push({
         kind: "user",
         key: `user-${userMsg.timestamp}`,
-        text: extractUserText(userMsg),
+        text,
+        images,
         timestamp: userMsg.timestamp,
       });
     } else if (role === "assistant") {
@@ -232,6 +241,7 @@ export function applyEvent(
         // Idempotent: skip if already present (e.g. ring-buffer replay after
         // buildViewItems already included this message from get_messages).
         if (state.items.some((i) => i.key === key)) return state;
+        const { text, images } = extractUserContent(userMsg);
         return {
           ...state,
           items: [
@@ -239,7 +249,8 @@ export function applyEvent(
             {
               kind: "user" as const,
               key,
-              text: extractUserText(userMsg),
+              text,
+              images,
               timestamp: userMsg.timestamp,
             },
           ],

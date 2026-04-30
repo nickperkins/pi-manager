@@ -474,6 +474,23 @@ button.session-item {
   white-space: pre-wrap;
 }
 
+/* ─── User message images ───────────────────────────────────────────────── */
+.message-images {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.message-image {
+  max-width: 100%;
+  max-height: 300px;
+  border-radius: 4px;
+  object-fit: contain;
+  border: 1px solid var(--color-border);
+  cursor: zoom-in;
+}
+
 /* ─── Markdown rendering ───────────────────────────────────────────────── */
 .message-markdown {
   line-height: 1.6;

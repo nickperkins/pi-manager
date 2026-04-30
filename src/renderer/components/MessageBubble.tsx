@@ -26,7 +26,19 @@ export function MessageBubble({ item }: MessageBubbleProps): React.JSX.Element |
   if (item.kind === "user") {
     return (
       <div className="message-bubble user">
-        <span className="message-text">{item.text}</span>
+        {item.images.length > 0 && (
+          <div className="message-images">
+            {item.images.map((src, i) => (
+              <img
+                key={i}
+                src={src}
+                className="message-image"
+                alt={`Attached image ${i + 1}`}
+              />
+            ))}
+          </div>
+        )}
+        {item.text && <span className="message-text">{item.text}</span>}
       </div>
     );
   }

@@ -8,6 +8,7 @@ const user: UserViewItem = {
   kind: "user",
   key: "u1",
   text: "Hello agent",
+  images: [],
   timestamp: 1000,
 };
 
@@ -244,5 +245,50 @@ describe("MessageBubble", () => {
   it("user message has no .message-markdown container", () => {
     const { container } = render(<MessageBubble item={user} />);
     expect(container.querySelector(".message-markdown")).toBeNull();
+  });
+
+  // ── User message images ─────────────────────────────────────────────────────────────
+
+  it("renders images attached to user message", () => {
+    const src = "data:image/png;base64,abc123";
+    const { container } = render(
+      <MessageBubble item={{ ...user, images: [src] }} />,
+    );
+    const img = container.querySelector(".message-image") as HTMLImageElement;
+    expect(img).toBeInTheDocument();
+    expect(img.src).toBe(src);
+    expect(img.alt).toBe("Attached image 1");
+  });
+
+  it("renders multiple images in order", () => {
+    const srcs = ["data:image/png;base64,a", "data:image/jpeg;base64,b"];
+    const { container } = render(
+      <MessageBubble item={{ ...user, images: srcs }} />,
+    );
+    const imgs = container.querySelectorAll(".message-image");
+    expect(imgs).toHaveLength(2);
+    expect((imgs[0] as HTMLImageElement).src).toBe(srcs[0]);
+    expect((imgs[1] as HTMLImageElement).src).toBe(srcs[1]);
+  });
+
+  it("renders text alongside images when both present", () => {
+    const src = "data:image/png;base64,abc";
+    render(<MessageBubble item={{ ...user, text: "look at this", images: [src] }} />);
+    expect(screen.getByText("look at this")).toBeInTheDocument();
+    expect(document.querySelector(".message-image")).toBeInTheDocument();
+  });
+
+  it("renders image-only message with no text span", () => {
+    const src = "data:image/png;base64,abc";
+    const { container } = render(
+      <MessageBubble item={{ ...user, text: "", images: [src] }} />,
+    );
+    expect(container.querySelector(".message-image")).toBeInTheDocument();
+    expect(container.querySelector(".message-text")).toBeNull();
+  });
+
+  it("renders no .message-images container when images is empty", () => {
+    const { container } = render(<MessageBubble item={user} />);
+    expect(container.querySelector(".message-images")).toBeNull();
   });
 });

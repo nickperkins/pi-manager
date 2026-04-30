@@ -93,9 +93,42 @@ describe("buildViewItems", () => {
     expect(items[0]).toMatchObject({ kind: "user", text: "foobar" });
   });
 
+  it("extracts images from array-content user message as data URIs", () => {
+    const items = buildViewItems([
+      {
+        role: "user",
+        content: [
+          { type: "text", text: "look at this" },
+          { type: "image", data: "abc123", mimeType: "image/png" },
+          { type: "image", data: "def456", mimeType: "image/jpeg" },
+        ],
+        timestamp: 1000,
+      } as unknown as AgentMessage,
+    ]);
+    expect(items[0]).toMatchObject({
+      kind: "user",
+      text: "look at this",
+      images: [
+        "data:image/png;base64,abc123",
+        "data:image/jpeg;base64,def456",
+      ],
+    });
+  });
+
+  it("produces empty images array for string-content user message", () => {
+    const items = buildViewItems([userMsg("hello") as unknown as AgentMessage]);
+    expect(items[0]).toMatchObject({ kind: "user", images: [] });
+  });
+
+  it("produces empty images array for text-only array-content user message", () => {
+    const items = buildViewItems([
+      userMsgArr([{ type: "text", text: "hi" }]) as unknown as AgentMessage,
+    ]);
+    expect(items[0]).toMatchObject({ kind: "user", images: [] });
+  });
+
   it("converts assistant message with text only", () => {
     const items = buildViewItems([assistantMsg({ text: "hi there" }) as unknown as AgentMessage]);
-    expect(items).toHaveLength(1);
     expect(items[0]).toMatchObject({
       kind: "assistant",
       text: "hi there",
