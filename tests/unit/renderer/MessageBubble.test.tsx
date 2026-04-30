@@ -8,6 +8,7 @@ const user: UserViewItem = {
   kind: "user",
   key: "u1",
   text: "Hello agent",
+  images: [],
   timestamp: 1000,
 };
 
@@ -35,8 +36,9 @@ describe("MessageBubble", () => {
   });
 
   it("renders assistant bubble with text", () => {
-    render(<MessageBubble item={assistant()} />);
-    expect(screen.getByText("I am an assistant")).toBeInTheDocument();
+    const { container } = render(<MessageBubble item={assistant()} />);
+    // react-markdown wraps plain text in a <p>
+    expect(container.querySelector(".message-markdown")).toHaveTextContent("I am an assistant");
   });
 
   it("assistant bubble has 'assistant' class", () => {
@@ -83,5 +85,210 @@ describe("MessageBubble", () => {
   it("streaming cursor absent when isStreaming is false", () => {
     render(<MessageBubble item={assistant({ isStreaming: false })} />);
     expect(screen.queryByLabelText("Streaming")).not.toBeInTheDocument();
+  });
+
+  it("renders plain text (not markdown) while streaming", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "**hello**", isStreaming: true })} />,
+    );
+    // plain text path — no ReactMarkdown output
+    expect(container.querySelector(".message-markdown")).toBeNull();
+    expect(container.querySelector("strong")).toBeNull();
+    expect(screen.getByText(/\*\*hello\*\*/)).toBeInTheDocument();
+  });
+
+  it("renders markdown once streaming ends", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "**hello**", isStreaming: false })} />,
+    );
+    expect(container.querySelector(".message-markdown")).toBeInTheDocument();
+    expect(container.querySelector("strong")).toHaveTextContent("hello");
+  });
+
+  it("streaming cursor is inline with text (inside .message-text span)", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "hi", isStreaming: true })} />,
+    );
+    const textSpan = container.querySelector(".message-text");
+    expect(textSpan).toBeInTheDocument();
+    expect(textSpan?.querySelector("[aria-label='Streaming']")).toBeInTheDocument();
+  });
+
+  // ── Markdown rendering ──────────────────────────────────────────────────
+
+  it("renders user message as plain text — no markdown parsing", () => {
+    render(<MessageBubble item={{ ...user, text: "**not bold** just text" }} />);
+    // Literal text must be present; no <strong> should exist
+    expect(screen.getByText("**not bold** just text")).toBeInTheDocument();
+    expect(document.querySelector("strong")).toBeNull();
+  });
+
+  it("renders assistant bold text as <strong>", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "Hello **world**" })} />,
+    );
+    expect(container.querySelector("strong")).toHaveTextContent("world");
+  });
+
+  it("renders assistant italic text as <em>", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "Hello _world_" })} />,
+    );
+    expect(container.querySelector("em")).toHaveTextContent("world");
+  });
+
+  it("renders assistant inline code as <code>", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "`npm install`" })} />,
+    );
+    expect(container.querySelector("code")).toHaveTextContent("npm install");
+  });
+
+  it("renders fenced code block as <pre><code>", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "```ts\nconst x = 1;\n```" })} />,
+    );
+    expect(container.querySelector("pre")).toBeInTheDocument();
+    expect(container.querySelector("pre code")).toHaveTextContent("const x = 1;");
+  });
+
+  it("renders h2 heading", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "## Section Title" })} />,
+    );
+    expect(container.querySelector("h2")).toHaveTextContent("Section Title");
+  });
+
+  it("renders h1 heading", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "# Top Heading" })} />,
+    );
+    expect(container.querySelector("h1")).toHaveTextContent("Top Heading");
+  });
+
+  it("renders unordered list as <ul><li>", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "- alpha\n- beta\n- gamma" })} />,
+    );
+    const items = container.querySelectorAll("li");
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent("alpha");
+    expect(items[1]).toHaveTextContent("beta");
+  });
+
+  it("renders ordered list as <ol><li>", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "1. first\n2. second" })} />,
+    );
+    expect(container.querySelector("ol")).toBeInTheDocument();
+    const items = container.querySelectorAll("li");
+    expect(items).toHaveLength(2);
+  });
+
+  it("assistant message is wrapped in .message-markdown container when not streaming", () => {
+    const { container } = render(<MessageBubble item={assistant()} />);
+    expect(container.querySelector(".message-markdown")).toBeInTheDocument();
+  });
+
+  it("renders GFM table as <table>", () => {
+    const { container } = render(
+      <MessageBubble
+        item={assistant({
+          text: "| A | B |\n|---|---|\n| 1 | 2 |",
+        })}
+      />,
+    );
+    expect(container.querySelector("table")).toBeInTheDocument();
+    expect(container.querySelector("th")).toHaveTextContent("A");
+    expect(container.querySelector("td")).toHaveTextContent("1");
+  });
+
+  it("omits .message-markdown when text is empty and not streaming", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "", isStreaming: false })} />,
+    );
+    // pure tool-call message — entire component returns null
+    expect(container.firstChild).toBeNull();
+  });
+
+  it("shows streaming cursor with no text when streaming has just started", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "", isStreaming: true })} />,
+    );
+    // streaming path renders plain text span, not markdown div
+    expect(container.querySelector(".message-markdown")).toBeNull();
+    expect(container.querySelector("[aria-label='Streaming']")).toBeInTheDocument();
+  });
+
+  it("renders GFM strikethrough as <del>", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "~~old~~" })} />,
+    );
+    expect(container.querySelector("del")).toHaveTextContent("old");
+  });
+
+  it("markdown links open in a new tab (target=_blank)", () => {
+    render(<MessageBubble item={assistant({ text: "[pi](https://pi.dev)" })} />);
+    const link = screen.getByRole("link", { name: "pi" });
+    expect(link).toHaveAttribute("href", "https://pi.dev");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noreferrer");
+  });
+
+  it("markdown images are suppressed", () => {
+    const { container } = render(
+      <MessageBubble item={assistant({ text: "![alt](https://example.com/img.png)" })} />,
+    );
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("user message has no .message-markdown container", () => {
+    const { container } = render(<MessageBubble item={user} />);
+    expect(container.querySelector(".message-markdown")).toBeNull();
+  });
+
+  // ── User message images ─────────────────────────────────────────────────────────────
+
+  it("renders images attached to user message", () => {
+    const src = "data:image/png;base64,abc123";
+    const { container } = render(
+      <MessageBubble item={{ ...user, images: [src] }} />,
+    );
+    const img = container.querySelector(".message-image") as HTMLImageElement;
+    expect(img).toBeInTheDocument();
+    expect(img.src).toBe(src);
+    expect(img.alt).toBe("Attached image 1");
+  });
+
+  it("renders multiple images in order", () => {
+    const srcs = ["data:image/png;base64,a", "data:image/jpeg;base64,b"];
+    const { container } = render(
+      <MessageBubble item={{ ...user, images: srcs }} />,
+    );
+    const imgs = container.querySelectorAll(".message-image");
+    expect(imgs).toHaveLength(2);
+    expect((imgs[0] as HTMLImageElement).src).toBe(srcs[0]);
+    expect((imgs[1] as HTMLImageElement).src).toBe(srcs[1]);
+  });
+
+  it("renders text alongside images when both present", () => {
+    const src = "data:image/png;base64,abc";
+    render(<MessageBubble item={{ ...user, text: "look at this", images: [src] }} />);
+    expect(screen.getByText("look at this")).toBeInTheDocument();
+    expect(document.querySelector(".message-image")).toBeInTheDocument();
+  });
+
+  it("renders image-only message with no text span", () => {
+    const src = "data:image/png;base64,abc";
+    const { container } = render(
+      <MessageBubble item={{ ...user, text: "", images: [src] }} />,
+    );
+    expect(container.querySelector(".message-image")).toBeInTheDocument();
+    expect(container.querySelector(".message-text")).toBeNull();
+  });
+
+  it("renders no .message-images container when images is empty", () => {
+    const { container } = render(<MessageBubble item={user} />);
+    expect(container.querySelector(".message-images")).toBeNull();
   });
 });

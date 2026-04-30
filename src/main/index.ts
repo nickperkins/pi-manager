@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, shell } from "electron";
 
 // Ensure correct app name in dock/taskbar (especially in dev mode where
 // the binary is "Electron" and app.getName() would return "electron")
@@ -47,6 +47,29 @@ function createWindow(): void {
   } else {
     win.loadFile(join(__dirname, "../renderer/index.html"));
   }
+
+  // Open all target=_blank links and external navigations in the OS browser,
+  // never inside the Electron window.
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    void shell.openExternal(url);
+    return { action: "deny" };
+  });
+
+  // Prevent any navigation away from the app inside the BrowserWindow.
+  // The renderer is a local SPA — it never needs to navigate. Any URL that
+  // looks like http/https/mailto is opened in the OS browser instead.
+  win.webContents.on("will-navigate", (event, url) => {
+    event.preventDefault();
+    try {
+      const parsed = new URL(url);
+      if (["http:", "https:", "mailto:"].includes(parsed.protocol)) {
+        void shell.openExternal(url);
+      }
+      // Other schemes (e.g. file:, javascript:) are silently blocked.
+    } catch {
+      // Unparseable URL — block silently.
+    }
+  });
 }
 
 app.whenReady().then(() => {

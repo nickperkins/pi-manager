@@ -20,21 +20,11 @@ function makeItem(overrides: Partial<ToolCallViewItem> = {}): ToolCallViewItem {
 }
 
 describe("ToolCallBlock", () => {
+  // ── Core rendering ─────────────────────────────────────────────────────
+
   it("renders the tool name", () => {
     render(<ToolCallBlock item={makeItem()} />);
     expect(screen.getByText("bash")).toBeInTheDocument();
-  });
-
-  it("args are collapsed by default (JSON not visible)", () => {
-    render(<ToolCallBlock item={makeItem()} />);
-    expect(screen.queryByText(/ls -la/)).not.toBeInTheDocument();
-  });
-
-  it("clicking the header expands args", async () => {
-    const user = userEvent.setup();
-    render(<ToolCallBlock item={makeItem()} />);
-    await user.click(screen.getByRole("button", { name: /Expand arguments for bash/i }));
-    expect(screen.getByText(/ls -la/)).toBeInTheDocument();
   });
 
   it("shows spinner when isRunning is true", () => {
@@ -47,40 +37,294 @@ describe("ToolCallBlock", () => {
     expect(screen.queryByLabelText("Running")).not.toBeInTheDocument();
   });
 
-  it("result section absent when result is null", () => {
-    render(<ToolCallBlock item={makeItem({ result: null })} />);
-    expect(screen.queryByText("result")).not.toBeInTheDocument();
-  });
-
-  it("result section visible when result is non-null", () => {
-    render(<ToolCallBlock item={makeItem({ result: "file.ts\nother.ts" })} />);
-    // The "result" label is rendered even collapsed
-    expect(screen.getByText("result")).toBeInTheDocument();
-  });
-
-  it("result content is collapsed by default", () => {
-    render(<ToolCallBlock item={makeItem({ result: "file.ts" })} />);
-    expect(screen.queryByText("file.ts")).not.toBeInTheDocument();
-  });
-
-  it("clicking result header expands result content", async () => {
-    const user = userEvent.setup();
-    render(<ToolCallBlock item={makeItem({ result: "file.ts" })} />);
-    // There are two toggle buttons: args and result. Get the result one.
-    const buttons = screen.getAllByRole("button");
-    await user.click(buttons[buttons.length - 1]); // result toggle is last
-    expect(screen.getByText("file.ts")).toBeInTheDocument();
-  });
-
-  it("shows 'error' label when isError is true", () => {
-    render(<ToolCallBlock item={makeItem({ result: "err", isError: true })} />);
-    expect(screen.getByText("error")).toBeInTheDocument();
-  });
-
   it("applies tool-call-error class when isError is true", () => {
     const { container } = render(
       <ToolCallBlock item={makeItem({ result: "err", isError: true })} />,
     );
     expect(container.firstChild).toHaveClass("tool-call-error");
+  });
+
+  // ── Toggle behaviour ────────────────────────────────────────────────────
+
+  it("bash/read/grep: header not clickable when result is null", () => {
+    const { container } = render(<ToolCallBlock item={makeItem({ result: null })} />);
+    expect(container.querySelector(".tool-call-header")).not.toHaveClass("tool-call-header-clickable");
+  });
+
+  it("bash: clicking header expands result", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({ result: "output text" })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("output text")).toBeInTheDocument();
+  });
+
+  it("bash: clicking header again collapses result", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({ result: "output text" })} />);
+    const btn = screen.getByRole("button");
+    await ue.click(btn);
+    await ue.click(btn);
+    expect(screen.queryByText("output text")).not.toBeInTheDocument();
+  });
+
+  it("shows 'result' label when expanded and not error", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({ result: "ok" })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("result")).toBeInTheDocument();
+  });
+
+  it("shows 'error' label when expanded and isError is true", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({ result: "err", isError: true })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("error")).toBeInTheDocument();
+  });
+
+  it("write: shows error result when isError is true", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "write",
+      args: { path: "/a.ts", content: "hello" },
+      result: "EACCES: permission denied",
+      isError: true,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("error")).toBeInTheDocument();
+    expect(screen.getByText("EACCES: permission denied")).toBeInTheDocument();
+    // Does NOT show the would-be written content
+    expect(screen.queryByText("written")).not.toBeInTheDocument();
+  });
+
+  it("edit: shows error result when isError is true", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "edit",
+      args: { path: "/a.ts", edits: [{ oldText: "a", newText: "b" }] },
+      result: "oldText not found in file",
+      isError: true,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("error")).toBeInTheDocument();
+    expect(screen.getByText("oldText not found in file")).toBeInTheDocument();
+    // Does NOT show the diff
+    expect(screen.queryByText("changes")).not.toBeInTheDocument();
+  });
+
+  // ── write ───────────────────────────────────────────────────────────────
+
+  it("write: always expandable even when result is null", () => {
+    const { container } = render(
+      <ToolCallBlock item={makeItem({ name: "write", args: { path: "/a.ts", content: "hello" }, result: null })} />,
+    );
+    expect(container.querySelector(".tool-call-header")).toHaveClass("tool-call-header-clickable");
+  });
+
+  it("write: expanding shows args.content with 'written' label", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "write",
+      args: { path: "/a.ts", content: "const x = 1;" },
+      result: null,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("written")).toBeInTheDocument();
+    expect(screen.getByText(/const x = 1;/)).toBeInTheDocument();
+  });
+
+  it("write: does not show result string", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "write",
+      args: { path: "/a.ts", content: "hello" },
+      result: "Written 5 bytes to /a.ts",
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.queryByText(/Written 5 bytes/)).not.toBeInTheDocument();
+  });
+
+  // ── edit ────────────────────────────────────────────────────────────────
+
+  it("edit: always expandable even when result is null", () => {
+    const { container } = render(
+      <ToolCallBlock item={makeItem({
+        name: "edit",
+        args: { path: "/a.ts", edits: [{ oldText: "old", newText: "new" }] },
+        result: null,
+      })} />,
+    );
+    expect(container.querySelector(".tool-call-header")).toHaveClass("tool-call-header-clickable");
+  });
+
+  it("edit: expanding shows diff with 'changes' label", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "edit",
+      args: { path: "/a.ts", edits: [{ oldText: "before", newText: "after" }] },
+      result: null,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("changes")).toBeInTheDocument();
+  });
+
+  it("edit: shows oldText with - prefix in diff", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "edit",
+      args: { path: "/a.ts", edits: [{ oldText: "before", newText: "after" }] },
+      result: null,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    // diffLines on single-line strings: "before" is removed, "after" is added
+    expect(screen.getByText(/- before/)).toBeInTheDocument();
+  });
+
+  it("edit: shows newText with + prefix in diff", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "edit",
+      args: { path: "/a.ts", edits: [{ oldText: "before", newText: "after" }] },
+      result: null,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText(/\+ after/)).toBeInTheDocument();
+  });
+
+  it("edit: context lines (unchanged) shown without +/- prefix", async () => {
+    const ue = userEvent.setup();
+    const { container } = render(<ToolCallBlock item={makeItem({
+      name: "edit",
+      args: {
+        path: "/a.ts",
+        edits: [{ oldText: "ctx\nold\nctx", newText: "ctx\nnew\nctx" }],
+      },
+      result: null,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText(/- old/)).toBeInTheDocument();
+    expect(screen.getByText(/\+ new/)).toBeInTheDocument();
+    // context lines get the diff-line-ctx class (not add/del)
+    const ctxLines = container.querySelectorAll(".diff-line-ctx");
+    expect(ctxLines.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("edit: shows 'edit N of M' index when multiple edits", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "edit",
+      args: {
+        path: "/a.ts",
+        edits: [
+          { oldText: "a", newText: "b" },
+          { oldText: "c", newText: "d" },
+        ],
+      },
+      result: null,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.getByText("edit 1 of 2")).toBeInTheDocument();
+    expect(screen.getByText("edit 2 of 2")).toBeInTheDocument();
+  });
+
+  it("edit: no index label for single edit", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "edit",
+      args: { path: "/a.ts", edits: [{ oldText: "a", newText: "b" }] },
+      result: null,
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.queryByText(/edit \d of \d/)).not.toBeInTheDocument();
+  });
+
+  it("edit: does not show result string", async () => {
+    const ue = userEvent.setup();
+    render(<ToolCallBlock item={makeItem({
+      name: "edit",
+      args: { path: "/a.ts", edits: [{ oldText: "a", newText: "b" }] },
+      result: "Successfully replaced 1 block(s)",
+    })} />);
+    await ue.click(screen.getByRole("button"));
+    expect(screen.queryByText(/Successfully replaced/)).not.toBeInTheDocument();
+  });
+
+  // ── Emoji & category ────────────────────────────────────────────────────
+
+  it.each([
+    ["bash",  "⚡", "shell"],
+    ["read",  "📖", "file-read"],
+    ["write", "📝", "file-write"],
+    ["edit",  "✏️",  "file-write"],
+    ["grep",  "🔍", "search"],
+    ["find",  "🔎", "search"],
+    ["ls",    "📂", "search"],
+  ])("%s renders emoji %s and category %s", (name, emoji, category) => {
+    const { container } = render(<ToolCallBlock item={makeItem({ name })} />);
+    expect(screen.getByText(emoji)).toBeInTheDocument();
+    expect(container.firstChild).toHaveAttribute("data-tool-category", category);
+  });
+
+  it("unknown tool renders 🔧 and category 'unknown'", () => {
+    const { container } = render(
+      <ToolCallBlock item={makeItem({ name: "web_search" })} />,
+    );
+    expect(screen.getByText("🔧")).toBeInTheDocument();
+    expect(container.firstChild).toHaveAttribute("data-tool-category", "unknown");
+  });
+
+  it("emoji has aria-hidden so screen readers skip it", () => {
+    render(<ToolCallBlock item={makeItem({ name: "bash" })} />);
+    expect(screen.getByText("⚡")).toHaveAttribute("aria-hidden", "true");
+  });
+
+  // ── Summary line ────────────────────────────────────────────────────────
+
+  it("bash shows first line of command as summary", () => {
+    render(<ToolCallBlock item={makeItem({ name: "bash", args: { command: "npm test" } })} />);
+    expect(screen.getByText("npm test")).toBeInTheDocument();
+  });
+
+  it("bash truncates long commands to 60 chars", () => {
+    const long = "a".repeat(70);
+    render(<ToolCallBlock item={makeItem({ name: "bash", args: { command: long } })} />);
+    expect(screen.getByText("a".repeat(60) + "…")).toBeInTheDocument();
+  });
+
+  it("bash shows only first line of multiline command", () => {
+    render(<ToolCallBlock item={makeItem({ name: "bash", args: { command: "echo hello\necho world" } })} />);
+    expect(screen.getByText("echo hello")).toBeInTheDocument();
+    expect(screen.queryByText(/echo world/)).not.toBeInTheDocument();
+  });
+
+  it("read shows basename of path as summary", () => {
+    render(<ToolCallBlock item={makeItem({ name: "read", args: { path: "/some/dir/file.ts" } })} />);
+    expect(screen.getByText("file.ts")).toBeInTheDocument();
+  });
+
+  it("write shows basename of path as summary", () => {
+    render(<ToolCallBlock item={makeItem({ name: "write", args: { path: "/a/b/out.json", content: "{}" } })} />);
+    expect(screen.getByText("out.json")).toBeInTheDocument();
+  });
+
+  it("edit shows basename of path as summary", () => {
+    render(<ToolCallBlock item={makeItem({ name: "edit", args: { path: "/src/foo.tsx", edits: [] } })} />);
+    expect(screen.getByText("foo.tsx")).toBeInTheDocument();
+  });
+
+  it("grep shows pattern wrapped in slashes as summary", () => {
+    render(<ToolCallBlock item={makeItem({ name: "grep", args: { pattern: "useState" } })} />);
+    expect(screen.getByText("/useState/")).toBeInTheDocument();
+  });
+
+  it("unknown tool shows no summary", () => {
+    const { container } = render(
+      <ToolCallBlock item={makeItem({ name: "web_search", args: { query: "test" } })} />,
+    );
+    expect(container.querySelector(".tool-call-summary")).toBeNull();
+  });
+
+  it("tool with missing expected arg shows no summary", () => {
+    const { container } = render(<ToolCallBlock item={makeItem({ name: "read", args: {} })} />);
+    expect(container.querySelector(".tool-call-summary")).toBeNull();
   });
 });
