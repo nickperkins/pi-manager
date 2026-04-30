@@ -1,0 +1,44 @@
+appId: com.pi-manager.app
+productName: Pi Manager
+copyright: "© 2026 Nick Perkins"
+
+# Disable ASAR so utilityProcess.fork() can load out/host/index.mjs from the
+# real filesystem. ASAR archives don't support direct filesystem access, which
+# is required for ESM host bundles loaded via utilityProcess.
+asar: false
+
+directories:
+  # electron-builder auto-discovers icon.icns / icon.ico / icon.png here
+  buildResources: resources
+
+# Exclusion-only pattern — keeps the default **/* base (per electron-vite docs).
+# Source, test, and dev-only files are excluded; built output in out/ and
+# production node_modules are included automatically.
+files:
+  - '!src/**'
+  - '!tests/**'
+  - '!docs/**'
+  - '!.pi/**'
+  - '!.husky/**'
+  - '!resources/icons/**'
+  - '!electron.vite.config.ts'
+  - '!vite.host.config.mts'
+  - '!tsconfig*'
+  - '!vitest.config.ts'
+  - '!*.md'
+  - '!.playwright-cli/**'
+
+mac:
+  category: public.app-category.developer-tools
+  target:
+    - target: dmg
+      arch: [arm64]
+
+win:
+  executableName: pi-manager
+  target: nsis
+
+linux:
+  target: AppImage
+
+npmRebuild: false

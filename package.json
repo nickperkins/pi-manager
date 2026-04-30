@@ -1,0 +1,45 @@
+{
+  "name": "pi-manager",
+  "version": "0.0.1",
+  "description": "Desktop manager for pi agentic coding sessions",
+  "license": "MIT",
+  "author": "Nick Perkins",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "npm run build:host && electron-vite build",
+    "build:host": "vite build --config vite.host.config.mts",
+    "test:host": "npm run build:host && electron-vite build && npx electron out/main/test-host.js --no-sandbox",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "electron-vite preview",
+    "dist": "npm run build && electron-builder",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "@mariozechner/pi-coding-agent": "latest",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@electron-toolkit/tsconfig": "^2.0.0",
+    "@electron-toolkit/utils": "^4.0.0",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "electron": "^41.3.0",
+    "electron-builder": "^26.8.1",
+    "electron-vite": "^5.0.0",
+    "husky": "^9.1.7",
+    "jsdom": "^29.1.0",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10",
+    "vitest": "^4.1.5"
+  }
+}

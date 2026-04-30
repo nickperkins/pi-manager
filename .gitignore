@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+
+# electron-builder output
+dist-electron/
+release/
+
+# TypeScript build info
+*.tsbuildinfo
+
+# Vite cache
+.vite/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# electron-builder temp
+builder-debug.yml
+builder-effective-config.yaml
+
+# Planning docs and internal notes — not for public repo
+docs/plan/
+docs/design-brief.md
+
+# pi agent config, skills, and review artifacts
+.pi/
+
+# playwright-cli session snapshots
+.playwright-cli/
+
+# Misc
+dump.json
