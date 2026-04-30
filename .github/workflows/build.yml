@@ -1,0 +1,79 @@
+name: Build
+
+on:
+  # Triggered by pushing a version tag: git tag v1.0.0 && git push --tags
+  # (or via the release:* npm scripts which do this automatically)
+  push:
+    tags:
+      - "v*.*.*"
+
+  # On PRs, only when the build config itself has changed — to verify the
+  # pipeline still works before merging. No artifact publishing on PRs.
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/build.yml"
+      - "electron-builder.yml"
+      - "electron.vite.config.ts"
+      - "vite.host.config.mts"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: macos-latest
+            platform: --mac
+          - os: windows-latest
+            platform: --win
+          - os: ubuntu-latest
+            platform: --linux
+
+    runs-on: ${{ matrix.os }}
+
+    # Point electron and electron-builder at workspace-relative paths so
+    # the cache step works identically on all three platforms.
+    env:
+      ELECTRON_CACHE: ${{ github.workspace }}/.cache/electron
+      ELECTRON_BUILDER_CACHE: ${{ github.workspace }}/.cache/electron-builder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Cache the Electron binary and electron-builder tools.
+      # Keyed on OS + package-lock.json so it invalidates when electron
+      # version changes. Saves ~120-200 MB of downloads per run.
+      - name: Cache Electron binaries
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.cache
+          key: ${{ runner.os }}-electron-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Set version from tag
+        if: github.event_name == 'push'
+        run: npm version ${GITHUB_REF_NAME#v} --no-git-tag-version
+        shell: bash
+
+      - name: Build
+        run: npm run build
+
+      - name: Package & publish (tag) / Package only (PR)
+        run: npx electron-builder ${{ matrix.platform }} --publish ${{ github.event_name == 'push' && 'always' || 'never' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

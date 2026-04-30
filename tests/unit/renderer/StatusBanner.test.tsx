@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import React from "react";
 import { StatusBanner } from "../../../src/renderer/components/StatusBanner";
-import type { StatusDetail } from "../../../src/renderer/hooks/use-status-detail";
 
 describe("StatusBanner", () => {
   it("renders nothing for idle status", () => {

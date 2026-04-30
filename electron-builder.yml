@@ -15,6 +15,7 @@ directories:
 # Source, test, and dev-only files are excluded; built output in out/ and
 # production node_modules are included automatically.
 files:
+  - '!.cache/**'
   - '!src/**'
   - '!tests/**'
   - '!docs/**'
@@ -39,6 +40,12 @@ win:
   target: nsis
 
 linux:
+  icon: resources/icon.png
   target: AppImage
 
 npmRebuild: false
+
+publish:
+  provider: github
+  owner: nickperkins
+  repo: pi-manager

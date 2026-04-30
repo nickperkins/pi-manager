@@ -2,9 +2,9 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { ManagerSessionStore } from "../../../src/main/manager-session-store";
 import type { PersistedManagerSession } from "@shared/types";
 import { randomUUID } from "node:crypto";
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 function makeStore(): { store: ManagerSessionStore; dir: string } {
   const dir = mkdtempSync(join(tmpdir(), "pi-manager-test-"));
@@ -47,8 +47,6 @@ describe("ManagerSessionStore", () => {
     });
 
     it("returns [] when file is malformed JSON", () => {
-      const { writeFileSync } = require("node:fs");
-      const { join } = require("node:path");
       writeFileSync(join(ctx.dir, "sessions.json"), "not json {{{{", "utf-8");
       const loaded = ctx.store.load();
       expect(loaded).toEqual([]);

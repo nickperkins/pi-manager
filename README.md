@@ -126,6 +126,16 @@ npm run dist                # macOS arm64 DMG → dist/
 
 Cross-platform builds (Windows, Linux) require the appropriate CI runners. See [`electron-builder.yml`](electron-builder.yml) for the build configuration.
 
+### Releasing
+
+```bash
+npm run release:patch   # bug fixes       0.0.1 → 0.0.2
+npm run release:minor   # new features    0.0.1 → 0.1.0
+npm run release:major   # breaking change 0.0.1 → 1.0.0
+```
+
+This bumps `package.json`, commits the change, creates a `v*.*.*` tag, and pushes both. GitHub Actions picks up the tag and builds mac (universal), windows, and linux artifacts, then publishes them as a GitHub release.
+
 ---
 
 ## Contributing
