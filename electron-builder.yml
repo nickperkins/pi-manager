@@ -15,6 +15,7 @@ directories:
 # Source, test, and dev-only files are excluded; built output in out/ and
 # production node_modules are included automatically.
 files:
+  - '!.cache/**'
   - '!src/**'
   - '!tests/**'
   - '!docs/**'
